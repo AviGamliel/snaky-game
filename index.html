@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+
+
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+        integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
+</head>
+<style>
+    #gameScreen {
+        display: none;
+    }
+</style>
+
+<body>
+    <section class="vh-100">
+        <div class="container h-100">
+            <div class="h-100" id="initialScreen">
+                <div class="d-flex flex-column align-items-center justify-content-center h-100">
+                    <h1>multiplaer snake</h1>
+                    <button type="submit" class="btn btn-success" id="newGamebutton">create new game </button>
+                    <div>OR</div>
+                    <div class="form-group">
+                        <input type="text" placeholder="enter Game Code" id="gameCodeInput">
+                    </div>
+                    <button type="submit" class="btn btn-success" id="joinGamebutton">join game </button>
+
+                    </button>
+
+                </div>
+            </div>
+
+
+
+            <div id="gameScreen" class="h-100">
+
+                <div class="d-flex flex-column align-items-center justify-content-center h-100">
+                    <h1> your game code is: <span id="gameCodeDisplay"></span></h1>
+                    <canvas id="canvas"></canvas>
+                </div>
+            </div>
+
+        </div>
+
+    </section>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"
+        integrity="sha512-v8ng/uGxkge3d1IJuEo6dJP8JViyvms0cly9pnbfRxT6/31c3dRWxIiwGnMSWwZjHKOuY3EVmijs7k1jz/9bLA=="
+        crossorigin="anonymous"></script>
+    <!-- <script>
+        var socket = io('http://localhost:4000');
+        socket.on('novaPromocao', function (data) {
+            alert(data.livro.id);
+        });
+    </script> -->
+    <!-- <script src="https://cdn.socket.io/socket.io-1.0.0.js"></script> -->
+    <!-- <script src="http://cdnjs.cloudflare.com/ajax/libs/socket.io/0.9.16/socket.io.min.js"></script> -->
+    <!-- <script src="https://code.jquery.com/jquery-1.11.1.js"></script> -->
+
+    <!-- <script src="http://code.jquery.com/jquery-latest.min.js"></script> -->
+    <!-- <script type="text/javascript" src="http://localhost:4000/socket.io/socket.io.js"></script>-->
+
+    <script>
+
+        var socket = io.connect('http://localhost:4000');
+        socket.on('init', handleInit);
+        socket.on('gameState', handleGameState);
+        socket.on('gameOver', handleGameOver);
+        socket.on('gameCode', handleGameCode);
+        socket.on('unknownGame', handleUnknownGame);
+        socket.on('tooManyPlayers', handletooManyPlayers);
+        console.log('on');
+        const BG_COLOUR = "#231f20";
+        const SNAKE_COLOUR = "#c2c2c2";
+        const FOOD_COLOUR = "#366916";
+
+
+
+
+        // const gameSreen = document.getElementById("gameScreen");
+
+        let canvas, ctx;
+        let player_Number;
+        let gameActive = false;
+        // function setup() {
+        //     var socket;
+        //     socket = io.connect('http://localhost:4000');
+        // }
+        // var socket = io.connect('http://localhost:4000')
+        // // setup();
+        // socket.on('init', handleInit)
+        // socket.on('gameState', handleGameState)
+        // socket.on('gameOver', handleGameOver)
+        // socket.on('gameCode', handleGameCode)
+        // socket.on('unknownGame', handleUnknownGame)
+        // socket.on('tooManyPlayers', handletooManyPlayers)
+
+
+
+        const game_screen = document.getElementById("gameScreen");
+        const initial_screen = document.getElementById("initialScreen");
+        const new_game_button = document.getElementById("newGamebutton");
+        const join_game_button = document.getElementById("joinGamebutton");
+        const game_code_input = document.getElementById("gameCodeInput");
+        const game_code_display = document.getElementById("gameCodeDisplay");
+
+        new_game_button.addEventListener('click', newGame);
+        join_game_button.addEventListener('click', joinGame);
+
+        function newGame() {
+            socket.emit('newGame');
+            //call the game
+            init();
+        }
+
+        function joinGame() {
+            const code = game_code_input.value;
+            console.log(code);
+            socket.emit('joinGame', code);
+            init();
+        }
+
+        // const gameState = {
+        //     player: {
+        //         pos: {
+        //             x: 3,
+        //             y: 10
+        //         },
+        //         vel: {
+        //             x: 1,
+        //             y: 0
+        //         },
+        //         snake: [
+        //             { x: 1, y: 10 },
+        //             { x: 2, y: 10 },
+        //             { x: 3, y: 10 },
+        //         ],
+        //     },
+        //     food: {
+        //         x: 7,
+        //         y: 7,
+        //     },
+        //     gridsze: 20,
+        // }
+
+        function init() {
+            initial_screen.style.display = "none";
+            game_screen.style.display = "block";
+            canvas = document.getElementById("canvas");
+            ctx = canvas.getContext('2d');
+            canvas.width = canvas.height = 600;
+            ctx.fillStyle = BG_COLOUR;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            document.addEventListener('keydown', keydown);
+            gameActive = true;
+        }
+
+        function keydown(e) {
+            console.log(e.keyCode);
+            socket.emit('keydown', e.keyCode)
+        }
+
+
+        function paintgame(state) {
+            ctx.fillStyle = BG_COLOUR;
+            ctx.fillRect(0, 0, canvas.width, canvas.height)
+            console.log(state);
+            const food = state.food;
+
+            const gridsze = state.gridsze;
+            const size = canvas.width / gridsze;
+            console.log(state);
+            ctx.fillStyle = FOOD_COLOUR;
+            ctx.fillRect(food.x * size, food.y * size, size, size);
+
+            paintPlayer(state.players[0], size, SNAKE_COLOUR)
+            paintPlayer(state.players[1], size, 'red')
+
+        }
+
+        function paintPlayer(playerState, size, S_COLOUR) {
+            const snake = playerState.snake;
+            ctx.fillStyle = S_COLOUR;
+            for (let cell of snake) {
+                ctx.fillRect(cell.x * size, cell.y * size, size, size)
+            }
+
+        }
+
+        // paintgame(gameState);
+
+        function handleInit(number) {
+            player_Number = number;
+        }
+
+        function handleGameState(gameState) {
+            if (!gameActive) {
+                return;
+            }
+
+            // console.log(gameState);
+            gameState = JSON.parse(gameState);
+            console.log(gameState);
+            // 
+            requestAnimationFrame(() => { paintgame(gameState); })
+        }
+
+        function handleGameOver(data) {
+            if (!gameActive) {
+                return
+            }
+            data = JSON.parse(data);
+
+            if (data.winner === player_Number) {
+                alert('you win')
+            } else {
+                alert('you lose');
+            }
+            gameActive = false;
+
+        }
+
+        function handleGameCode(gameCode) {
+            game_code_display.innerText = gameCode;
+        }
+        function handletooManyPlayers() {
+            reset();
+            alert('unknow game Code');
+        }
+        function handleUnknownGame() {
+            reset();
+            alert('THIS GAME IS RUNNING');
+        }
+
+        function reset() {
+            player_Number = null;
+            game_code_input = "";
+            game_code_display = "";
+            initial_screen.style.display = "block";
+            game_screen.style.display = "none";
+        }
+
+    </script>
+    <!-- <script src="index.js"></script> -->
+
+
+    <!-- <script>
+
+            console.log('sdsd');
+            var socket = io.connect('http://localhost');
+            console.log("Socket connected" + socket.connected);
+
+                // socket.on('notification', function (value) {
+                //insert your code here
+                // });
+
+        </script> -->
+
+</body>
+
+</html>
